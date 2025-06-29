@@ -1,6 +1,7 @@
+// src/features/auth/authAPI.ts
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 
-// Define request/response types
+// Request payload types
 export interface LoginRequest {
   email: string;
   password: string;
@@ -11,17 +12,12 @@ export interface RegisterRequest {
   email: string;
   contactPhone: string;
   password: string;
+  userType: string;
+  confirmationCode?: string;
 }
 
-export interface AuthResponse {
-  user: {
-    userType: any;
-    userId: number;
-    email: string;
-    userName: string;
-  };
-  token?: string; // if you return token
-  message?: string;
+export interface RequestPasswordReset {
+  email: string;
 }
 
 export interface ResetPasswordRequest {
@@ -29,8 +25,19 @@ export interface ResetPasswordRequest {
   newPassword: string;
 }
 
-export interface RequestPasswordReset {
+// User object returned from the backend
+export interface AuthUser {
+  userId: number;
+  userName: string;
   email: string;
+  userType: string;
+}
+
+// Auth response structure
+export interface AuthResponse {
+  user: AuthUser;
+  token?: string;
+  message?: string;
 }
 
 export const authApi = createApi({

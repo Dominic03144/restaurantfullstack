@@ -1,10 +1,9 @@
-import { combineReducers } from "@reduxjs/toolkit";
 import authReducer from "../features/auth/authSlice";
-import { authApi } from "../features/auth/authAPI";
+import cartReducer from "../features/cart/cartSlice"; // ✅ import cart slice
 
-const rootReducer = combineReducers({
+const rootReducer = {
   auth: authReducer,
-  [authApi.reducerPath]: authApi.reducer,
-});
+  cart: cartReducer, // ✅ add cart to the root reducer
+};
 
 export default rootReducer;

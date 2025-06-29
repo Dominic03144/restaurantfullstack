@@ -1,10 +1,12 @@
+// src/features/auth/authSlice.ts
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 
-interface User {
-  email: string;
+export interface User {
   userId: number;
-  token?: string; // optional depending on your auth flow
-  userName?: string;
+  userName: string;
+  email: string;
+  userType: string;
+  token?: string;
 }
 
 interface AuthState {
@@ -12,9 +14,18 @@ interface AuthState {
   isAuthenticated: boolean;
 }
 
+const getStoredUser = (): User | null => {
+  try {
+    const data = localStorage.getItem("user");
+    return data ? JSON.parse(data) : null;
+  } catch {
+    return null;
+  }
+};
+
 const initialState: AuthState = {
-  user: null,
-  isAuthenticated: false,
+  user: getStoredUser(),
+  isAuthenticated: !!getStoredUser(),
 };
 
 const authSlice = createSlice({
@@ -32,5 +43,6 @@ const authSlice = createSlice({
   },
 });
 
+// ✅ These are what you need to import elsewhere
 export const { loginSuccess, logout } = authSlice.actions;
 export default authSlice.reducer;

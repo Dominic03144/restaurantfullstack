@@ -1,25 +1,28 @@
- import { useNavigate } from "react-router-dom";
-import { useDispatch } from "react-redux";
-import { logout } from "../../features/auth/authSlice";
- const MemberDashboard = () => {
-  const dispatch = useDispatch();
-  const navigate = useNavigate();
+import { Outlet, Link } from "react-router-dom";
 
-  const handleLogout = () => {
-    dispatch(logout());
-    localStorage.clear();
-    navigate("/login");
-  };
-
+const MemberDashboard = () => {
   return (
-    <div className="h-screen flex flex-col items-center justify-center bg-base-200">
-      <h1 className="text-3xl font-bold mb-4">Member Dashboard</h1>
-      <button onClick={handleLogout} className="btn btn-error">
-        Logout
-      </button>
+    <div className="p-6">
+      <h1 className="text-3xl font-bold text-yellow-500 mb-4">
+        Welcome to Your Dashboard
+      </h1>
+      <p className="text-lg mb-6">
+        Use the sidebar to browse menu, view orders, or logout.
+      </p>
+
+      <nav className="flex gap-6 mb-6">
+        <Link to="/member/menu" className="text-blue-500 hover:underline">
+          Menu
+        </Link>
+        <Link to="/member/orders" className="text-blue-500 hover:underline">
+          My Orders
+        </Link>
+      </nav>
+
+      {/* Nested routes render here */}
+      <Outlet />
     </div>
   );
 };
 
 export default MemberDashboard;
- 

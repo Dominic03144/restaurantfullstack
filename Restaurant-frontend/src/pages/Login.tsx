@@ -1,95 +1,159 @@
-import { useState } from "react";
-import { toast } from "sonner";
-import { Link, useNavigate } from "react-router-dom";
-import { useLoginMutation } from "../features/auth/authAPI";
+import { useEffect, useState } from "react";
+import axios from "axios";
 import { useDispatch } from "react-redux";
-import { loginSuccess } from "../features/auth/authSlice";
+import { useNavigate, Link } from "react-router-dom";
+import { loginSuccess } from "../features/auth/authSlice"; // ✅ Import the action creator, not the reducer
+import Navbar from "../components/Navbar";
+import type { AppDispatch } from "../app/store";
 
-const Login = () => {
+const BASE_URL = "http://localhost:3000/api";
+
+export default function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [login, { isLoading }] = useLoginMutation();
+  const [error, setError] = useState("");
+  const [redirecting, setRedirecting] = useState(false);
 
+  const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
-  const dispatch = useDispatch();
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  // ✅ Map roles to routes
+  const redirectMap: Record<string, string> = {
+    admin: "/admin/dashboard",
+    owner: "/owner/dashboard",
+    customer: "/customer/dashboard",
+    driver: "/driver/dashboard",
+    member: "/member/dashboard",
+  };
 
-    if (!email || !password) {
-      toast.error("All fields are required");
-      return;
+  // ✅ Auto-redirect if already logged in
+  useEffect(() => {
+    const storedUser = localStorage.getItem("user");
+    const storedToken = localStorage.getItem("token");
+
+    if (storedUser && storedToken) {
+      try {
+        const user = JSON.parse(storedUser);
+        const route = redirectMap[user.userType?.toLowerCase()];
+        if (route) navigate(route);
+      } catch (err) {
+        localStorage.removeItem("user");
+        localStorage.removeItem("token");
+      }
     }
+  }, [navigate]);
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
 
     try {
-      const res = await login({ email, password }).unwrap();
-      dispatch(loginSuccess(res.user));
-      toast.success("Login successful!");
+      const res = await axios.post(`${BASE_URL}/auth/login`, { email, password });
+      const { token, user } = res.data;
 
-      const userType = res?.user?.userType;
-
-      // Role-based redirect
-      switch (userType) {
-        case "admin":
-          navigate("/admin");
-          break;
-        case "member":
-          navigate("/member");
-          break;
-        case "owner":
-          navigate("/owner");
-          break;
-        case "driver":
-          navigate("/driver");
-          break;
-        case "customer":
-          navigate("/customer");
-          break;
-        default:
-          navigate("/"); // fallback
+      if (!user || !token) {
+        setError("Invalid response from server.");
+        return;
       }
+
+      // Save to localStorage
+      localStorage.setItem("token", token);
+      localStorage.setItem("user", JSON.stringify(user));
+
+      // Dispatch to Redux
+      dispatch(
+        loginSuccess({
+          userId: user.userId,
+          userName: user.userName,
+          email: user.email,
+          token,
+          userType: user.userType,
+        })
+      );
+
+      const roleRoute = redirectMap[user.userType?.toLowerCase()];
+      if (roleRoute) {
+        setRedirecting(true);
+        setTimeout(() => navigate(roleRoute), 1000);
+      } else {
+        setError("Unknown user role. Cannot redirect.");
+      }
+
     } catch (err: any) {
-      toast.error(err?.data?.message || "Login failed");
+      console.error("Login failed:", err);
+      const msg =
+        err.response?.data?.message ||
+        err.response?.data?.error ||
+        "Login failed. Please try again.";
+      setError(msg);
     }
   };
 
   return (
-    <div className="flex justify-center items-center min-h-screen bg-base-200">
-      <form
-        onSubmit={handleSubmit}
-        className="card w-full max-w-md bg-base-100 p-6 shadow space-y-4"
-      >
-        <h2 className="text-xl font-bold text-center">Login</h2>
-        <input
-          type="email"
-          placeholder="Email"
-          className="input input-bordered w-full"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-        />
-        <input
-          type="password"
-          placeholder="Password"
-          className="input input-bordered w-full"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
-        <button
-          type="submit"
-          className="btn btn-primary w-full"
-          disabled={isLoading}
-        >
-          {isLoading ? "Logging in..." : "Login"}
-        </button>
-        <p className="text-sm text-center">
-          Don't have an account?{" "}
-          <Link to="/register" className="link link-primary">
-            Register
-          </Link>
-        </p>
-      </form>
+    <div
+      className="min-h-screen bg-cover bg-center relative flex flex-col"
+      style={{
+        backgroundImage:
+          "url('https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?ixlib=rb-4.0.3&auto=format&fit=crop&w=1950&q=80')",
+      }}
+    >
+      <div className="absolute inset-0 bg-black bg-opacity-60 z-0" />
+      <Navbar />
+
+      <div className="relative z-10 flex-grow flex items-center justify-center px-4">
+        <div className="bg-[#1a1a2acc] backdrop-blur-md rounded-lg shadow-lg p-8 max-w-md w-full text-white">
+          <h2 className="text-3xl font-bold mb-6 text-center text-yellow-400">Login</h2>
+
+          {error && (
+            <p className="text-yellow-300 mb-4 text-center font-semibold">
+              {error}
+            </p>
+          )}
+
+          {redirecting && (
+            <p className="text-yellow-200 mb-4 text-center font-semibold animate-pulse">
+              Redirecting to your dashboard...
+            </p>
+          )}
+
+          <form onSubmit={handleLogin} className="space-y-5">
+            <input
+              type="email"
+              placeholder="Email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              className="w-full p-3 rounded border border-yellow-400 bg-[#ffffff0f] placeholder-yellow-300 focus:outline-none focus:ring-2 focus:ring-yellow-400"
+              style={{ color: "white" }}
+            />
+
+            <input
+              type="password"
+              placeholder="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              className="w-full p-3 rounded border border-yellow-400 bg-[#ffffff0f] placeholder-yellow-300 focus:outline-none focus:ring-2 focus:ring-yellow-400"
+              style={{ color: "white" }}
+            />
+
+            <button
+              type="submit"
+              className="w-full bg-yellow-400 hover:bg-yellow-300 text-[#1a1a2a] font-semibold py-3 rounded transition"
+              disabled={redirecting}
+            >
+              {redirecting ? "Logging in..." : "Login"}
+            </button>
+          </form>
+
+          <p className="mt-6 text-center text-yellow-200">
+            Don’t have an account?{" "}
+            <Link to="/register" className="hover:underline font-semibold text-yellow-300">
+              Register
+            </Link>
+          </p>
+        </div>
+      </div>
     </div>
   );
-};
-
-export default Login;
+}
